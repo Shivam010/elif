@@ -31,16 +31,10 @@ jobs:
 
     - name: Build Windows OS Binary
       run: GOOS=windows go build -v -o bin/windows.exe .
-      
-    - name: Create a Tag
-      uses: anothrNick/github-tag-action@master
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        WITH_V: true
-        REPO_OWNER: Shivam010
-    
+
     - name: Create a Release
       uses: ncipollo/release-action@v1
+      continue-on-error: true
       with:
         artifacts: "bin/*"
         body: "It includes binaries of all file server in three OS format."
