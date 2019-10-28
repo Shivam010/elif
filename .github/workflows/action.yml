@@ -1,0 +1,38 @@
+name: Build & Release
+on: 
+  push:
+    branches: 
+    - master
+jobs:
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: Set up Go 1.13
+      uses: actions/setup-go@v1
+      with:
+        go-version: 1.13
+      id: go
+
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v1
+
+    - name: Build Linux OS Binary
+      run: GOOS=linux go build -v -o bin/linux .
+
+    - name: Build Darwin OS Binary
+      run: GOOS=darwin go build -v -o bin/mac .
+
+    - name: Build Windows OS Binary
+      run: GOOS=windows go build -v -o bin/windows.exe .
+    
+    - name: Release
+      uses: ncipollo/release-action@v1
+      with:
+        artifacts: "bin/*"
+        body: "It includes binaries of all file server in three OS format."
+        commit: master
+        token: ${{ secrets.GITHUB_TOKEN }}
+
