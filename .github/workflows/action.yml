@@ -27,8 +27,15 @@ jobs:
 
     - name: Build Windows OS Binary
       run: GOOS=windows go build -v -o bin/windows.exe .
+      
+    - name: Create a Tag
+      uses: anothrNick/github-tag-action@master
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        REPO_OWNER: Shivam010
+        WITH_V: true
     
-    - name: Release
+    - name: Create a Release
       uses: ncipollo/release-action@v1
       with:
         artifacts: "bin/*"
