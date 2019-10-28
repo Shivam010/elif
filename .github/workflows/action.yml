@@ -39,4 +39,3 @@ jobs:
         artifacts: "bin/*"
         body: "It includes binaries of all file server in three OS format."
         token: ${{ secrets.GITHUB_TOKEN }}
-
