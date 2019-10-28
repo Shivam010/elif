@@ -32,14 +32,13 @@ jobs:
       uses: anothrNick/github-tag-action@master
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        REPO_OWNER: Shivam010
         WITH_V: true
+        REPO_OWNER: Shivam010
     
     - name: Create a Release
       uses: ncipollo/release-action@v1
       with:
         artifacts: "bin/*"
         body: "It includes binaries of all file server in three OS format."
-        commit: master
         token: ${{ secrets.GITHUB_TOKEN }}
 
