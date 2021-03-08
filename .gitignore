@@ -12,4 +12,10 @@
 *.out
 
 # Binary
-elif
+bin
+./elif
+
+# ide files and directories
+.idea
+.vscode
+.DS_Store

@@ -1,8 +1,8 @@
 package main
 
 import (
+	"flag"
 	"fmt"
-	"log"
 
 	"os"
 
@@ -10,8 +10,18 @@ import (
 )
 
 func main() {
+	port := 80
+	flag.IntVar(&port, "p", port, "define port - shorthand")
+	flag.IntVar(&port, "port", port, "define port")
 
-	dir, _ := os.Getwd()
+	dir, err := os.Getwd()
+	if err != nil {
+		dir = "."
+	}
+	flag.StringVar(&dir, "d", dir, "define file server directory - shorthand")
+	flag.StringVar(&dir, "dir", dir, "define file server directory")
+	flag.Parse()
+
 	fs := &fasthttp.FS{
 		Root:               dir,
 		AcceptByteRange:    true,
@@ -19,19 +29,14 @@ func main() {
 	}
 	fsHandler := fs.NewRequestHandler()
 
-	requestHandler := func(ctx *fasthttp.RequestCtx) {
-		fsHandler(ctx)
-	}
-
-	fmt.Println("Starting HTTP server on PORT 80")
-	go func() {
-		if err := fasthttp.ListenAndServe(":80", requestHandler); err != nil {
-			log.Fatalln("error in ListenAndServe: " + err.Error())
-		}
-	}()
-
+	fmt.Printf("Starting File server on http://localhost:%v \n", port)
 	fmt.Printf("Serving files from directory: '%s'\n", dir)
 
-	// Wait forever.
-	select {}
+	if err := fasthttp.ListenAndServe(
+		fmt.Sprintf(":%v", port),
+		func(ctx *fasthttp.RequestCtx) { fsHandler(ctx) },
+	); err != nil {
+		fmt.Printf("error in ListenAndServe: %v\n", err)
+		os.Exit(1)
+	}
 }
