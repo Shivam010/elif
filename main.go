@@ -44,7 +44,6 @@ func main() {
 		StreamRequestBody: true,
 		Handler: func(ctx *fasthttp.RequestCtx) {
 			pt := string(ctx.Path())
-			fmt.Println(ctx.Request.Header.ContentLength())
 			switch {
 			case pt == homeRoute:
 				ctx.SetContentType("text/html; charset=utf-8")
