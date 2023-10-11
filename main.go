@@ -1,9 +1,11 @@
 package main
 
 import (
+	"encoding/base64"
 	"flag"
 	"fmt"
 	"strings"
+	"time"
 
 	"os"
 
@@ -14,6 +16,7 @@ const (
 	homeRoute     = "/"
 	uploaderRoute = "/~send"
 	explorerRoute = "/~explorer"
+	faviconRoute  = "/favicon.ico"
 )
 
 func main() {
@@ -40,7 +43,7 @@ func main() {
 	fmt.Printf("Serving files from directory: '%s'\n", dir)
 
 	s := &fasthttp.Server{
-		MaxRequestBodySize: 1024 * 1024 * 5, // 100mb
+		MaxRequestBodySize: 1024 * 1024 * 10, // 100mb
 		StreamRequestBody:  true,
 		Handler: func(ctx *fasthttp.RequestCtx) {
 			pt := string(ctx.Path())
@@ -48,6 +51,12 @@ func main() {
 			case pt == homeRoute:
 				ctx.SetContentType("text/html; charset=utf-8")
 				ctx.SetBody([]byte(homePage))
+
+			case pt == faviconRoute:
+				ctx.SetContentType("image/png")
+				ctx.Response.Header.Set("Cache-Control", "public, max-age=7776000")
+				body, _ := base64.StdEncoding.DecodeString(favicon)
+				ctx.SetBody(body)
 
 			// serve files from explorer route
 			case strings.HasPrefix(pt, explorerRoute):
@@ -58,6 +67,7 @@ func main() {
 
 			// handle uploading
 			case pt == uploaderRoute:
+				now := time.Now()
 				if ctx.IsGet() {
 					ctx.SetContentType("text/html; charset=utf-8")
 					ctx.SetBody([]byte(uploaderPage))
@@ -81,8 +91,8 @@ func main() {
 						ctx.SetBody([]byte("failed-s " + err.Error()))
 						return
 					}
-					ctx.SetBody([]byte(`done`))
 				}
+				ctx.SetBody([]byte(`done in ` + time.Since(now).String()))
 
 			default:
 				fsHandler(ctx)
@@ -96,6 +106,7 @@ func main() {
 }
 
 const (
+	favicon  = `iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAQAAAAnOwc2AAAAEUlEQVR42mP8/58BAzAOZUEA5OUT9xiCXfgAAAAASUVORK5CYII=`
 	homePage = `
 		<head>
 			<meta charSet="utf-8" />
@@ -151,6 +162,7 @@ const (
 				
 				const handleSubmit = (event) => {
 					event.preventDefault();
+					now = new Date()
 					waiting.innerText="uploading..."
 				
 					const formData = new FormData();
@@ -171,7 +183,7 @@ const (
 						then(r => r.text()).
 						then(r => {
 							alert(r);
-							waiting.innerText=""
+							waiting.innerText="done in "+ (new Date() - now)/1000 + " seconds"
 						}).
 						catch(err => alert("Something went wrong!" + err));
 				};
