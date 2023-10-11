@@ -3,10 +3,17 @@ package main
 import (
 	"flag"
 	"fmt"
+	"strings"
 
 	"os"
 
 	"github.com/valyala/fasthttp"
+)
+
+const (
+	homeRoute     = "/"
+	uploaderRoute = "/~send"
+	explorerRoute = "/~explorer"
 )
 
 func main() {
@@ -32,11 +39,132 @@ func main() {
 	fmt.Printf("Starting File server on http://localhost:%v \n", port)
 	fmt.Printf("Serving files from directory: '%s'\n", dir)
 
-	if err := fasthttp.ListenAndServe(
-		fmt.Sprintf(":%v", port),
-		func(ctx *fasthttp.RequestCtx) { fsHandler(ctx) },
-	); err != nil {
+	s := &fasthttp.Server{
+		MaxRequestBodySize: 1024 * 1024 * 5, // 100mb
+		StreamRequestBody: true,
+		Handler: func(ctx *fasthttp.RequestCtx) {
+			pt := string(ctx.Path())
+			fmt.Println(ctx.Request.Header.ContentLength())
+			switch {
+			case pt == homeRoute:
+				ctx.SetContentType("text/html; charset=utf-8")
+				ctx.SetBody([]byte(homePage))
+
+			// serve files from explorer route
+			case strings.HasPrefix(pt, explorerRoute):
+				uri := ctx.URI()
+				uri.SetPath(pt[len(explorerRoute):])
+				ctx.Request.SetRequestURI(uri.String())
+				fsHandler(ctx)
+
+			// handle uploading
+			case pt == uploaderRoute:
+				if ctx.IsGet() {
+					ctx.SetContentType("text/html; charset=utf-8")
+					ctx.SetBody([]byte(uploaderPage))
+					return
+				}
+				// else check for file
+				mf, err := ctx.MultipartForm()
+				if err != nil {
+					fmt.Println("failed in upload parsing form", err)
+					ctx.SetBody([]byte("failed-p " + err.Error()))
+					return
+				}
+				if mf.File == nil {
+					ctx.SetBody([]byte("no files provided"))
+					return
+				}
+				for _, fls := range mf.File {
+					fl := fls[0]
+					if err := fasthttp.SaveMultipartFile(fl, fl.Filename); err != nil {
+						fmt.Println("failed in saving file", err)
+						ctx.SetBody([]byte("failed-s " + err.Error()))
+						return
+					}
+					ctx.SetBody([]byte(`done`))
+				}
+
+			default:
+				fsHandler(ctx)
+			}
+		},
+	}
+	if err := s.ListenAndServe(fmt.Sprintf(":%v", port)); err != nil {
 		fmt.Printf("error in ListenAndServe: %v\n", err)
 		os.Exit(1)
 	}
 }
+
+const (
+	homePage = `
+		<style>
+			html, body {
+				background: black;
+				color: white;
+				font-family: sans-serif, system-ui, Arial;
+			}
+			p,a {
+				display: block;
+				margin-block: 5px;
+				color: white;
+			}
+		</style>
+		<body>
+			<p>Hello 👋</p>
+			<a href="` + uploaderRoute + `">Use this to send</a>
+			<a href="` + explorerRoute + `">Explore here</a>
+		</body>
+	`
+	uploaderPage = `
+		<style>
+			html, body {
+				background: black;
+				color: white;
+				font-family: sans-serif, system-ui, Arial;
+			}
+			p,a {
+				display: block;
+				margin-block: 5px;
+				color: white;
+			}
+		</style>
+		<body>
+			<h1>File Upload</h1>
+			<form id="form" enctype="multipart/form-data">
+				<label for="files">Select files</label>
+				<input id="file" type="file" multiple />
+				<button type="submit">Upload</button>
+			</form>
+			<script>
+				const form = document.getElementById("form");
+				const input = document.getElementById("file");
+				
+				const handleSubmit = (event) => {
+					event.preventDefault();
+				
+					const formData = new FormData();
+					[...input.files].forEach(
+						(file, i) => {
+							key = "file"
+							if(input.files.length != 1)
+								key+= i
+							formData.append(key, file);
+						}
+					)
+
+				
+					fetch("` + uploaderRoute + `", {
+						method: "post",
+						body: formData,
+					}).
+						then(r => r.text()).
+						then(r => alert(r)).
+						catch(err => alert("Something went wrong!" + err));
+				};
+				
+				form.addEventListener("submit", handleSubmit);
+			</script>
+		</body>
+	`
+)
