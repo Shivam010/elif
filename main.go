@@ -41,7 +41,7 @@ func main() {
 
 	s := &fasthttp.Server{
 		MaxRequestBodySize: 1024 * 1024 * 5, // 100mb
-		StreamRequestBody: true,
+		StreamRequestBody:  true,
 		Handler: func(ctx *fasthttp.RequestCtx) {
 			pt := string(ctx.Path())
 			switch {
@@ -97,6 +97,10 @@ func main() {
 
 const (
 	homePage = `
+		<head>
+			<meta charSet="utf-8" />
+			<meta name="viewport" content="width=device-width, initial-scale=1" />
+		</head>
 		<style>
 			html, body {
 				background: black;
@@ -116,6 +120,10 @@ const (
 		</body>
 	`
 	uploaderPage = `
+		<head>
+			<meta charSet="utf-8" />
+			<meta name="viewport" content="width=device-width, initial-scale=1" />
+		</head>
 		<style>
 			html, body {
 				background: black;
@@ -135,12 +143,15 @@ const (
 				<input id="file" type="file" multiple />
 				<button type="submit">Upload</button>
 			</form>
+			<p id="waiting"></p>
 			<script>
 				const form = document.getElementById("form");
 				const input = document.getElementById("file");
+				const waiting = document.getElementById("waiting");
 				
 				const handleSubmit = (event) => {
 					event.preventDefault();
+					waiting.innerText="uploading..."
 				
 					const formData = new FormData();
 					[...input.files].forEach(
@@ -158,7 +169,10 @@ const (
 						body: formData,
 					}).
 						then(r => r.text()).
-						then(r => alert(r)).
+						then(r => {
+							alert(r);
+							waiting.innerText=""
+						}).
 						catch(err => alert("Something went wrong!" + err));
 				};
 				
